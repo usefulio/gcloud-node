@@ -3,6 +3,7 @@
 Node idiomatic client for Google Cloud services. Work in progress... Watch the repo for notifications.
 
 ![Travis Build Status](https://travis-ci.org/GoogleCloudPlatform/gcloud-node.svg)
+[![Coverage Status](https://img.shields.io/coveralls/GoogleCloudPlatform/gcloud-node.svg)](https://coveralls.io/r/GoogleCloudPlatform/gcloud-node?branch=master)
 
 This client supports the following Google Cloud services:
 
@@ -59,7 +60,7 @@ The downloaded file contains credentials you'll need for authorization.
     * [Write file contents and metadata](#write-file-contents-and-metadata)
     * [Copy files](#copy-files)
     * [Remove files](#remove-files)
-* [Google Cloud Pub/Sub](#google-cloud-pub-sub)
+* [Google Cloud Pub/Sub](#google-cloud-pubsub-experimental)
     * [Configuration](#configuration-2)
     * [Topics and Subscriptions](#topics-and-subscriptions)
     * [Publishing a message](#publishing-a-message)
@@ -98,12 +99,12 @@ TODO
 Get operations require a valid key to retrieve the key identified entity from Datastore. Skip to the "Querying" section if you'd like to learn more about querying against Datastore.
 
 ~~~~ js
-ds.get(datastore.key('Company', 123), function(err, entity) {});
+ds.get(ds.key('Company', 123), function(err, entity) {});
 
 // alternatively, you can retrieve multiple entities at once.
 ds.get([
-    datastore.key('Company', 123),
-    datastore.key('Product', 'Computer')
+    ds.key('Company', 123),
+    ds.key('Product', 'Computer')
 ], function(err, entities) {});
 ~~~~
 
@@ -113,15 +114,15 @@ To learn more about keys and incomplete keys, skip to the Keys section.
 
 ~~~~ js
 ds.save({
-    key: datastore.key('Company', null), data: {/*...*/}
+    key: ds.key('Company', null), data: {/*...*/}
 }, function(err, key) {
     // First arg is an incomplete key for Company kind.
     // console.log(key) will output ['Company', 599900452312].
 });
 // alternatively, you can save multiple entities at once.
 ds.save([
-    { key: datastore.key('Company', 123), data: {/*...*/} },
-    { key: datastore.key('Product', 'Computer'), data: {/*...*/} }
+    { key: ds.key('Company', 123), data: {/*...*/} },
+    { key: ds.key('Product', 'Computer'), data: {/*...*/} }
 ], function(err, keys) {
     // if the first key was incomplete, keys[0] will return the generated key.
 });
@@ -135,10 +136,10 @@ ds.delete(['Company', 599900452312], function(err) {});
 // alternatively, you can delete multiple entities of different
 // kinds at once.
 ds.delete([
-    datastore.key('Company', 599900452312),
-    datastore.key('Company', 599900452315),
-    datastore.key('Office', 'mtv'),
-    datastore.key('Company', 123, 'Employee', 'jbd')
+    ds.key('Company', 599900452312),
+    ds.key('Company', 599900452315),
+    ds.key('Office', 'mtv'),
+    ds.key('Company', 123, 'Employee', 'jbd')
 ], function(err) {});
 ~~~~
 
@@ -177,14 +178,14 @@ stored as properties is not currently supported.
 
 ~~~~ js
 var q = ds.createQuery('Company')
-    .filter('__key__ =', datastore.key('Company', 'Google'))
+    .filter('__key__ =', ds.key('Company', 'Google'))
 ~~~~
 
 In order to filter by ancestors, use `hasAncestor` helper.
 
 ~~~ js
 var q = ds.createQuery('Child')
-    .hasAncestor(datastore.key('Parent', 123));
+    .hasAncestor(ds.key('Parent', 123));
 ~~~
 
 ##### Sorting
@@ -192,8 +193,8 @@ var q = ds.createQuery('Child')
 You can sort the results by a property name ascendingly or descendingly.
 
 ~~~~ js
-// sorts by size ascendingly.
-var q = ds.createQuery('Company').order('+size');
+// sorts by size ascendingly. (default)
+var q = ds.createQuery('Company').order('size');
 
 // sorts by size descendingly.
 var q = ds.createQuery('Company').order('-size');
@@ -214,30 +215,21 @@ Pagination allows you to set an offset, limit and starting cursor to a query.
 
 ~~~~ js
 var q = ds.createQuery('Company')
-    .start(cursorToken); // continue to retrieve results from the given cursor.
+    .start(cursorToken) // continue to retrieve results from the given cursor.
     .offset(100) // start from the 101th result after start cursor.
-    .limit(10)   // return only 10 results
+    .limit(10);  // return only 10 results
 ~~~~
 
 #### Allocating IDs (ID generation)
 
 You can generate IDs without creating entities. The following call will create
-100 new IDs from the Company kind which exists under the default namespace.
+100 new IDs from the Company kind which exists under the dataset's namespace. If
+no namespace was provided when the dataset was created, the default namespace
+will be used.
 
 ~~~~ js
-ds.allocateIds(datastore.key('Company', null), 100, function(err, keys) {
+ds.allocateIds(ds.key('Company', null), 100, function(err, keys) {
 
-});
-~~~~
-
-You may prefer to create IDs from a non-default namespace by providing
-an incomplete key with a namespace. Similar to the previous example, the
-call below will create 100 new IDs, but from the Company kind that exists
-under the "ns-test" namespace.
-
-~~~~ js
-var incompleteKey = datastore.key('ns-test', 'Company', null);
-ds.allocateIds(incompleteKey, 100, function(err, keys) {
 });
 ~~~~
 
